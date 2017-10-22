@@ -24,6 +24,7 @@ class HelloTriangleApplication {
 #endif
 
 	VkInstance m_inst;
+	GLFWwindow * m_window;
 
 public:
 	void run() {
@@ -44,16 +45,16 @@ private:
 
 		VkApplicationInfo app_info = {};
 		app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		app_info.pNext = NULL;
+		app_info.pNext = nullptr;
 		app_info.pApplicationName = "Vulkan Tutorial";
 		app_info.applicationVersion = 1;
-		app_info.pEngineName = "vulkan_tuto;
+		app_info.pEngineName = "vulkan_tuto";
 		app_info.engineVersion = 1;
 		app_info.apiVersion = VK_API_VERSION_1_0;
 
 		VkInstanceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pNext = NULL;
+		createInfo.pNext = nullptr;
 		createInfo.flags = 0;
 		createInfo.pApplicationInfo = &app_info;
 		if (enableValidationLayers) {
@@ -68,8 +69,12 @@ private:
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 		createInfo.ppEnabledExtensionNames = extensions.data();
 
-		VkResult res = vkCreateInstance(&createInfo, NULL, &m_inst);
+		VkResult res = vkCreateInstance(&createInfo, nullptr, &m_inst);
 		assert(res == VK_SUCCESS);
+	}
+
+	void destroyInstance() {
+		vkDestroyInstance(m_inst, nullptr);
 	}
 
 	void initWindow() {
@@ -78,17 +83,19 @@ private:
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-		window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+		m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 	}
 
 	void mainLoop() {
-		while (!glfwWindowShouldClose(window)) {
+		while (!glfwWindowShouldClose(m_window)) {
 			glfwPollEvents();
 		}
 	}
 
 	void cleanup() {
-		glfwDestroyWindow(window);
+		destroyInstance();
+
+		glfwDestroyWindow(m_window);
 
 		glfwTerminate();
 	}
