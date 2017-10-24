@@ -19,6 +19,13 @@ VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCa
 	}
 }
 
+void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT callback, const VkAllocationCallbacks* pAllocator) {
+	auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
+	if (func != nullptr) {
+		func(instance, callback, pAllocator);
+	}
+}
+
 class HelloTriangleApplication {
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
@@ -40,6 +47,7 @@ class HelloTriangleApplication {
 public:
 	void run() {
 		initVulkan();
+		initWindow();
 		mainLoop();
 		cleanup();
 	}
@@ -63,7 +71,6 @@ private:
 			throw std::runtime_error("failed to set up debug callback!");
 		}
 	}
-
 
 	void createInstance() {
 		if (enableValidationLayers && !checkValidationLayerSupport()) {
@@ -121,6 +128,8 @@ private:
 	}
 
 	void cleanup() {
+		//DestroyDebugReportCallbackEXT(m_instance, m_callback, nullptr);
+
 		vkDestroyInstance(m_instance, nullptr);
 
 		glfwDestroyWindow(m_window);
