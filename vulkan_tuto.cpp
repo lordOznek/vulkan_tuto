@@ -28,34 +28,13 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 
 struct QueueFamilyIndices {
 	int graphicsFamily = -1;
+	int presentFamily = -1;
 
 	bool isComplete() {
-		return graphicsFamily >= 0;
+		return graphicsFamily >= 0 && presentFamily >= 0;
 	}
 };
 
-QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
-	QueueFamilyIndices indices;
-	uint32_t queueFamCount = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, nullptr);
-	
-	std::vector<VkQueueFamilyProperties> queueFamProp(queueFamCount);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, queueFamProp.data());
-
-	int i = 0;
-	for (auto& queueFam : queueFamProp) {
-		if (queueFam.queueCount > 0 && queueFam.queueFlags == VK_QUEUE_GRAPHICS_BIT) {
-			indices.graphicsFamily = i;
-		}
-
-		if (indices.isComplete()) {
-			break;
-		}
-
-		++i;
-	}
-	return indices;
-}
 
 class HelloTriangleApplication {
 	const int WIDTH = 800;
@@ -72,8 +51,12 @@ class HelloTriangleApplication {
 #endif
 
 	VkInstance m_instance;
-	VkPhysicalDevice m_device;
+	VkDevice m_device;
+	VkPhysicalDevice m_physicalDevice;
+	VkQueue m_graphicsQueue;
+	VkQueue m_presentQueue;
 	VkDebugReportCallbackEXT m_callback;
+	VkSurfaceKHR m_surface;
 	GLFWwindow * m_window;
 
 public:
@@ -88,18 +71,51 @@ private:
 	void initVulkan() {
 		createInstance();
 		setupDebugCallback();
+		createSurface();
 		pickPhysicalDevice();
 		createLogicalDevice();
 	}
 
+	void createSurface() {
+		if (!glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface)) {
+			throw std::runtime_error("Error while initializing Window Surface.");
+		}
+	}
+
 	void createLogicalDevice() {
-		QueueFamilyIndices indices = findQueueFamilies(m_device);
-		VkDeviceQueueCreateInfo createInfo = {};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		createInfo.queueFamilyIndex = indices.graphicsFamily;
-		createInfo.queueCount = 1;
+		// Before creating device, setup a graphical queue
+		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+		VkDeviceQueueCreateInfo queueCreateInfo = {};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
+		queueCreateInfo.queueCount = 1;
 		float queuePriority = 1.0f;
-		createInfo.pQueuePriorities = &queuePriority;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+		
+		// For now we don't need anything special
+		VkPhysicalDeviceFeatures deviceFeatures = {};
+		
+		// Create device
+		VkDeviceCreateInfo deviceCreateInfo = {};
+		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+		deviceCreateInfo.queueCreateInfoCount = 1;
+		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+		deviceCreateInfo.enabledExtensionCount = 0;
+
+		if (enableValidationLayers) {
+			deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
+			deviceCreateInfo.ppEnabledLayerNames = m_validationLayers.data();
+		}
+		else {
+			deviceCreateInfo.enabledLayerCount = 0;
+		}
+
+		if (vkCreateDevice(m_physicalDevice, &deviceCreateInfo, nullptr, &m_device) != VK_SUCCESS) {
+			throw std::runtime_error("failed to create logical device!");
+		}
+
+		vkGetDeviceQueue(m_device, indices.graphicsFamily, 0, &m_graphicsQueue);
 	}
 
 	void pickPhysicalDevice() {
@@ -113,13 +129,39 @@ private:
 
 		for (auto& device : devices) {
 			if (isDeviceSuitable(device)) {
-				m_device = device;
+				m_physicalDevice = device;
 			}
 		}
 
-		if (m_device == VK_NULL_HANDLE) {
+		if (m_physicalDevice == VK_NULL_HANDLE) {
 			throw std::runtime_error("No suitable device");
 		}
+	}
+
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+		QueueFamilyIndices indices;
+		uint32_t queueFamCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamProp(queueFamCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, queueFamProp.data());
+
+		int i = 0;
+		for (auto& queueFam : queueFamProp) {
+			VkBool32 presentSupport = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
+
+			if (queueFam.queueCount > 0 && queueFam.queueFlags == VK_QUEUE_GRAPHICS_BIT && presentSupport) {
+				indices.graphicsFamily = i;
+			}
+
+			if (indices.isComplete()) {
+				break;
+			}
+
+			++i;
+		}
+		return indices;
 	}
 
 	bool isDeviceSuitable(VkPhysicalDevice & device) {
@@ -206,7 +248,11 @@ private:
 	}
 
 	void cleanup() {
-		//DestroyDebugReportCallbackEXT(m_instance, m_callback, nullptr);
+		DestroyDebugReportCallbackEXT(m_instance, m_callback, nullptr);
+
+		vkDestroyDevice(m_device, nullptr);
+
+		vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
 		vkDestroyInstance(m_instance, nullptr);
 
