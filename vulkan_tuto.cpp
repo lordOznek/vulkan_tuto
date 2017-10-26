@@ -26,6 +26,37 @@ void DestroyDebugReportCallbackEXT(VkInstance instance, VkDebugReportCallbackEXT
 	}
 }
 
+struct QueueFamilyIndices {
+	int graphicsFamily = -1;
+
+	bool isComplete() {
+		return graphicsFamily >= 0;
+	}
+};
+
+QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
+	QueueFamilyIndices indices;
+	uint32_t queueFamCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, nullptr);
+	
+	std::vector<VkQueueFamilyProperties> queueFamProp(queueFamCount);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamCount, queueFamProp.data());
+
+	int i = 0;
+	for (auto& queueFam : queueFamProp) {
+		if (queueFam.queueCount > 0 && queueFam.queueFlags == VK_QUEUE_GRAPHICS_BIT) {
+			indices.graphicsFamily = i;
+		}
+
+		if (indices.isComplete()) {
+			break;
+		}
+
+		++i;
+	}
+	return indices;
+}
+
 class HelloTriangleApplication {
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
@@ -41,6 +72,7 @@ class HelloTriangleApplication {
 #endif
 
 	VkInstance m_instance;
+	VkPhysicalDevice m_device;
 	VkDebugReportCallbackEXT m_callback;
 	GLFWwindow * m_window;
 
@@ -56,6 +88,52 @@ private:
 	void initVulkan() {
 		createInstance();
 		setupDebugCallback();
+		pickPhysicalDevice();
+		createLogicalDevice();
+	}
+
+	void createLogicalDevice() {
+		QueueFamilyIndices indices = findQueueFamilies(m_device);
+		VkDeviceQueueCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		createInfo.queueFamilyIndex = indices.graphicsFamily;
+		createInfo.queueCount = 1;
+		float queuePriority = 1.0f;
+		createInfo.pQueuePriorities = &queuePriority;
+	}
+
+	void pickPhysicalDevice() {
+		uint32_t count = 0;
+		vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
+		if (count == 0) {
+			throw std::runtime_error("no device found");
+		}
+		std::vector<VkPhysicalDevice> devices(count);
+		vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
+
+		for (auto& device : devices) {
+			if (isDeviceSuitable(device)) {
+				m_device = device;
+			}
+		}
+
+		if (m_device == VK_NULL_HANDLE) {
+			throw std::runtime_error("No suitable device");
+		}
+	}
+
+	bool isDeviceSuitable(VkPhysicalDevice & device) {
+		VkPhysicalDeviceProperties properties;
+		vkGetPhysicalDeviceProperties(device, &properties);
+		std::cout << "Checking device" << std::endl <<
+			properties.deviceID << std::endl <<
+			properties.deviceName << std::endl <<
+			properties.driverVersion << std::endl;
+
+		VkPhysicalDeviceFeatures features;
+		vkGetPhysicalDeviceFeatures(device, &features);
+		return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
+			features.geometryShader && findQueueFamilies(device).isComplete();
 	}
 
 	void setupDebugCallback() {
@@ -66,7 +144,7 @@ private:
 		createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT;
 		createInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 		createInfo.pfnCallback = debugCallback;
-		
+
 		if (CreateDebugReportCallbackEXT(m_instance, &createInfo, nullptr, &m_callback) != VK_SUCCESS) {
 			throw std::runtime_error("failed to set up debug callback!");
 		}
@@ -111,7 +189,7 @@ private:
 			throw std::runtime_error("failed to create instance!");
 		}
 	}
-	
+
 	void initWindow() {
 		glfwInit();
 
@@ -176,7 +254,7 @@ private:
 		}
 
 		bool allFound = true;
-		for (const auto & req: requiredExt) {
+		for (const auto & req : requiredExt) {
 			bool found = false;
 			for (const auto & ext : extensions) {
 				if (strcmp(ext.extensionName, req) == 0) {
