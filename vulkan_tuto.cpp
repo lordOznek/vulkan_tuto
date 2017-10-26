@@ -8,6 +8,7 @@
 #include <cstring>
 #include <functional>
 #include <vector>
+#include <set>
 
 VkResult CreateDebugReportCallbackEXT(VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
 	auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
@@ -85,6 +86,7 @@ private:
 	void createLogicalDevice() {
 		// Before creating device, setup a graphical queue
 		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
+		
 		VkDeviceQueueCreateInfo queueCreateInfo = {};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
@@ -233,7 +235,11 @@ private:
 	}
 
 	void initWindow() {
-		glfwInit();
+		if (glfwInit() == GLFW_FALSE) {
+			throw std::runtime_error("Error initializing GLFW");
+		}
+
+		assert(glfwVulkanSupported() == GLFW_TRUE);
 
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -315,7 +321,6 @@ private:
 
 	std::vector<const char*> getRequiredExtensions() {
 		std::vector<const char*> extensions;
-
 		unsigned int glfwExtensionCount = 0;
 		const char** glfwExtensions;
 		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
