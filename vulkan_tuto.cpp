@@ -36,7 +36,6 @@ struct QueueFamilyIndices {
 	}
 };
 
-
 class HelloTriangleApplication {
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
@@ -51,24 +50,39 @@ class HelloTriangleApplication {
 	const bool enableValidationLayers = true;
 #endif
 
-	VkInstance m_instance;
-	VkDevice m_device;
-	VkPhysicalDevice m_physicalDevice;
-	VkQueue m_graphicsQueue;
-	VkQueue m_presentQueue;
+	VkInstance m_instance = VK_NULL_HANDLE;
+	VkDevice m_device = VK_NULL_HANDLE;
+	VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
+	VkQueue m_graphicsQueue = VK_NULL_HANDLE;
+	VkQueue m_presentQueue = VK_NULL_HANDLE;
 	VkDebugReportCallbackEXT m_callback;
-	VkSurfaceKHR m_surface;
-	GLFWwindow * m_window;
+	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+	GLFWwindow * m_window = nullptr;
 
 public:
 	void run() {
-		initVulkan();
 		initWindow();
+		initVulkan();
 		mainLoop();
 		cleanup();
 	}
 
 private:
+	void initWindow() {
+		if (glfwInit() == GLFW_FALSE) {
+			throw std::runtime_error("Error initializing GLFW");
+		}
+
+		if (glfwVulkanSupported() == GLFW_FALSE) {
+			throw std::runtime_error("Error GLFW does not support Vulkan");
+		}
+
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+		m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+	}
+
 	void initVulkan() {
 		createInstance();
 		setupDebugCallback();
@@ -78,7 +92,7 @@ private:
 	}
 
 	void createSurface() {
-		if (!glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface)) {
+		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
 			throw std::runtime_error("Error while initializing Window Surface.");
 		}
 	}
@@ -87,12 +101,18 @@ private:
 		// Before creating device, setup a graphical queue
 		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 		
-		VkDeviceQueueCreateInfo queueCreateInfo = {};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
-		queueCreateInfo.queueCount = 1;
+		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+		std::set<int> uniqueQueueFamilyIndices = { indices.graphicsFamily, indices.presentFamily };
 		float queuePriority = 1.0f;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
+
+		for (int queueFamily : uniqueQueueFamilyIndices) {
+			VkDeviceQueueCreateInfo queueCreateInfo = {};
+			queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueCreateInfo.queueFamilyIndex = queueFamily;
+			queueCreateInfo.queueCount = 1;
+			queueCreateInfo.pQueuePriorities = &queuePriority;
+			queueCreateInfos.push_back(queueCreateInfo);
+		}
 		
 		// For now we don't need anything special
 		VkPhysicalDeviceFeatures deviceFeatures = {};
@@ -100,8 +120,8 @@ private:
 		// Create device
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-		deviceCreateInfo.queueCreateInfoCount = 1;
+		deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
 		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
 		deviceCreateInfo.enabledExtensionCount = 0;
 
@@ -118,6 +138,7 @@ private:
 		}
 
 		vkGetDeviceQueue(m_device, indices.graphicsFamily, 0, &m_graphicsQueue);
+		vkGetDeviceQueue(m_device, indices.presentFamily, 0, &m_presentQueue);
 	}
 
 	void pickPhysicalDevice() {
@@ -152,9 +173,11 @@ private:
 		for (auto& queueFam : queueFamProp) {
 			VkBool32 presentSupport = false;
 			vkGetPhysicalDeviceSurfaceSupportKHR(device, i, m_surface, &presentSupport);
-
-			if (queueFam.queueCount > 0 && queueFam.queueFlags == VK_QUEUE_GRAPHICS_BIT && presentSupport) {
+			if (queueFam.queueCount > 0 && queueFam.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				indices.graphicsFamily = i;
+			}
+			if (queueFam.queueCount > 0 && presentSupport) {
+				indices.presentFamily = i;
 			}
 
 			if (indices.isComplete()) {
@@ -176,8 +199,7 @@ private:
 
 		VkPhysicalDeviceFeatures features;
 		vkGetPhysicalDeviceFeatures(device, &features);
-		return properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU &&
-			features.geometryShader && findQueueFamilies(device).isComplete();
+		return findQueueFamilies(device).isComplete();
 	}
 
 	void setupDebugCallback() {
@@ -232,19 +254,6 @@ private:
 		if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create instance!");
 		}
-	}
-
-	void initWindow() {
-		if (glfwInit() == GLFW_FALSE) {
-			throw std::runtime_error("Error initializing GLFW");
-		}
-
-		assert(glfwVulkanSupported() == GLFW_TRUE);
-
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-
-		m_window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
 	}
 
 	void mainLoop() {
