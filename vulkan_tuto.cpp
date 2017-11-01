@@ -70,6 +70,9 @@ class HelloTriangleApplication {
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	GLFWwindow * m_window = nullptr;
 	VkSwapchainKHR m_swapChain;
+	std::vector<VkImage> m_swapChainImages;
+	VkFormat m_swapChainImageFormat;
+	VkExtent2D m_swapChainExtent;
 
 public:
 	void run() {
@@ -186,9 +189,7 @@ private:
 		if (swapChainDetails.capabilities.maxImageCount > 0 && swapChainDetails.capabilities.maxImageCount < imageCount) {
 			imageCount = swapChainDetails.capabilities.maxImageCount;
 		}
-
-
-
+		
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.surface = m_surface;
@@ -222,6 +223,16 @@ private:
 		if (vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain) != VK_SUCCESS) {
 			throw std::runtime_error("failed to create swap chain");
 		}
+
+		// Retrieves swap chain images
+		uint32_t imageCount;
+		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
+		m_swapChainImages.resize(imageCount);
+		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
+
+		// Store variables
+		m_swapChainImageFormat = surfaceFormat.format;
+		m_swapChainExtent = extent;
 	}
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) {
