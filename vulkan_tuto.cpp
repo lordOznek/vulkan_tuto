@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <vector>
 #include <set>
@@ -107,6 +108,12 @@ private:
 		createLogicalDevice();
 		createSwapChain();
 		createImageViews();
+		createGraphicsPipeline();
+	}
+
+	void createGraphicsPipeline() {
+		auto vertShaderCode = readFile("Shaders/vert.spv");
+		auto fragShaderCode = readFile("Shaders/frag.spv");
 	}
 
 	void createSurface() {
@@ -227,7 +234,6 @@ private:
 		}
 
 		// Retrieves swap chain images
-		uint32_t imageCount;
 		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
 		m_swapChainImages.resize(imageCount);
 		vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
@@ -529,7 +535,7 @@ private:
 			return capabilities.currentExtent;
 		}
 		else {
-			VkExtent2D actualExtent = { WIDTH, HEIGHT };
+			VkExtent2D actualExtent = { uint32_t(WIDTH), uint32_t(HEIGHT) };
 			actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 			actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
 			return actualExtent;
@@ -549,6 +555,23 @@ private:
 		std::cerr << "validation layer: " << msg << std::endl;
 
 		return VK_FALSE;
+	}
+
+	static std::vector<char> readFile(const std::string& filename) {
+		std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+		if (!file.is_open()) {
+			throw std::runtime_error("error while opening file");
+		}
+
+		size_t fileSize = (size_t)file.tellg();
+		std::vector<char> buffer(fileSize);
+
+		file.seekg(0);
+		file.read(buffer.data(), fileSize);
+
+		file.close();
+		return buffer;
 	}
 };
 

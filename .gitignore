@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /glfw-3.2.1/lib/glfw3.dll
+*.spv
