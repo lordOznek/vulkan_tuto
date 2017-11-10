@@ -116,6 +116,16 @@ private:
 		auto fragShaderCode = readFile("Shaders/frag.spv");
 	}
 
+	VkShaderModule createShaderModule(const std::vector<char> & shader) {
+		VkShaderModuleCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		createInfo.codeSize = shader.size();
+		createInfo.pCode = reinterpret_cast<uint32_t>(shader.data());
+		VkShaderModule vertShader;
+		vkCreateShaderModule(m_device, &createInfo, nullptr, &vertShader);
+
+	}
+
 	void createSurface() {
 		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
 			throw std::runtime_error("Error while initializing Window Surface.");
