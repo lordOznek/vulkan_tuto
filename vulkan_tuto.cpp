@@ -51,7 +51,7 @@ class HelloTriangleApplication {
 	const std::vector<const char*> m_validationLayers = {
 		"VK_LAYER_LUNARG_standard_validation"
 	};
-	
+
 	const std::vector<const char*> deviceExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
@@ -114,16 +114,41 @@ private:
 	void createGraphicsPipeline() {
 		auto vertShaderCode = readFile("Shaders/vert.spv");
 		auto fragShaderCode = readFile("Shaders/frag.spv");
+
+		VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
+		VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
+
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
+		vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertShaderStageInfo.module = vertShaderModule;
+		vertShaderStageInfo.pName = "main";
+		vertShaderStageInfo.pSpecializationInfo = nullptr;
+
+		VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
+		fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragShaderStageInfo.module = fragShaderModule;
+		fragShaderStageInfo.pName = "main";
+		fragShaderStageInfo.pSpecializationInfo = nullptr;
+
+		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
+
+		vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
+		vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
 	}
 
 	VkShaderModule createShaderModule(const std::vector<char> & shader) {
 		VkShaderModuleCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 		createInfo.codeSize = shader.size();
-		createInfo.pCode = reinterpret_cast<uint32_t>(shader.data());
-		VkShaderModule vertShader;
-		vkCreateShaderModule(m_device, &createInfo, nullptr, &vertShader);
-
+		createInfo.pCode = reinterpret_cast<const uint32_t*>(shader.data());
+		VkShaderModule shaderModule;
+		if (VK_SUCCESS != vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule)) {
+			throw std::runtime_error("Cannot create shader module");
+		}
+		return shaderModule;
 	}
 
 	void createSurface() {
@@ -135,7 +160,7 @@ private:
 	void createLogicalDevice() {
 		// Before creating device, setup a graphical queue
 		QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
-		
+
 		std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
 		std::set<int> uniqueQueueFamilyIndices = { indices.graphicsFamily, indices.presentFamily };
 		float queuePriority = 1.0f;
@@ -148,10 +173,10 @@ private:
 			queueCreateInfo.pQueuePriorities = &queuePriority;
 			queueCreateInfos.push_back(queueCreateInfo);
 		}
-		
+
 		// For now we don't need anything special
 		VkPhysicalDeviceFeatures deviceFeatures = {};
-		
+
 		// Create device
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -208,7 +233,7 @@ private:
 		if (swapChainDetails.capabilities.maxImageCount > 0 && swapChainDetails.capabilities.maxImageCount < imageCount) {
 			imageCount = swapChainDetails.capabilities.maxImageCount;
 		}
-		
+
 		VkSwapchainCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		createInfo.surface = m_surface;
@@ -406,7 +431,7 @@ private:
 		}
 
 		vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
-		
+
 		vkDestroyDevice(m_device, nullptr);
 
 		vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
@@ -527,7 +552,7 @@ private:
 
 	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
 		VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
-	
+
 		for (auto& availablePresentMode : availablePresentModes) {
 			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
 				return availablePresentMode;
