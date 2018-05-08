@@ -6,9 +6,9 @@ out gl_PerVertex {
 };
 
 vec2 inputVertex[3] = {
-	vec2(0.0, 0.5),
-	vec2(0.5, 0.0),
-	vec2(-0.5, 0.0)
+	vec2(0.0, -0.5),
+	vec2(0.5, 0.5),
+	vec2(-0.5, 0.5)
 };
 
 vec3 inputColor[3] = vec3[](
