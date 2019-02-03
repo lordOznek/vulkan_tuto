@@ -2,10 +2,24 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="vulkan_tuto.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="core\vulkan\Device3D_vulkan.cpp">
+      <Filter>core\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="core\vulkan\DeviceQueue_vulkan.cpp">
+      <Filter>core\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Shaders">
       <UniqueIdentifier>{592adf77-a4c9-47a6-ae27-20c6ddd65347}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{ec220ab7-643e-444a-8bc2-90e30977d6db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\vulkan">
+      <UniqueIdentifier>{8b1176f5-8a88-464f-a403-ce762ba75096}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -15,5 +29,17 @@
     <None Include="Shaders\shader.frag">
       <Filter>Shaders</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="core\device.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="core\vulkan\DeviceQueue_vulkan.h">
+      <Filter>core\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="core\vulkan\Device3D_vulkan.h">
+      <Filter>core\vulkan</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

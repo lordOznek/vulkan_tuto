@@ -1,7 +1,7 @@
 /*
 Vulkan tutorials from https://vulkan-tutorial.com
 */
-
+#include <stdafx.h>
 //#include <vulkan/vulkan.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -405,7 +405,8 @@ private:
 	}
 
 	void createSurface() {
-		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS) {
+		if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS)
+		{
 			throw std::runtime_error("Error while initializing Window Surface.");
 		}
 	}
@@ -918,17 +919,17 @@ private:
 		return buffer;
 	}
 };
-
-int main() {
-	HelloTriangleApplication app;
-
-	try {
-		app.run();
-	}
-	catch (const std::runtime_error& e) {
-		std::cerr << e.what() << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	return EXIT_SUCCESS;
-}
+//
+//int main() {
+//	HelloTriangleApplication app;
+//
+//	try {
+//		app.run();
+//	}
+//	catch (const std::runtime_error& e) {
+//		std::cerr << e.what() << std::endl;
+//		return EXIT_FAILURE;
+//	}
+//
+//	return EXIT_SUCCESS;
+//}
